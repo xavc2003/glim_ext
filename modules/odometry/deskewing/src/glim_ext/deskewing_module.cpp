@@ -34,7 +34,7 @@ DeskewingModule::DeskewingModule(const DeskewingParams& params, const std::strin
 
   deskewing.reset(new CloudDeskewing());
 
-  glim::OdometryEstimationCallbacks::on_new_frame.add([this](const EstimationFrame::ConstPtr& frame) { this->on_new_frame(frame); });
+  glim::OdometryEstimationCallbacks::on_update_new_frame.add([this](const EstimationFrame::ConstPtr& frame) { this->on_new_frame(frame); });
 
   kill_switch = false;
   thread = std::thread([this]() { this->task(); });
