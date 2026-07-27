@@ -18,6 +18,11 @@ std::vector<GenericTopicSubscription::Ptr> DeskewingModule::create_subscriptions
 }
 
 void DeskewingModule::publish_deskewed_frame(const DeskewingResult::Ptr& result) {
+  if (!deskewed_points_imu_pub) {
+    // This can happen if the module is not running in ROS2 mode
+    return;
+  }
+
   const auto& raw_points = result->frame->raw_frame->raw_points;
 
   auto frame = std::make_shared<gtsam_points::PointCloudCPU>();
