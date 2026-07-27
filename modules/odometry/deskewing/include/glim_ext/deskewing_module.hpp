@@ -22,7 +22,13 @@ public:
   DeskewingParams();
   ~DeskewingParams();
 
+  DeskewingParams& disable_thread() {
+    use_thread = false;
+    return *this;
+  }
+
 public:
+  bool use_thread;  // Whether to use a separate thread for deskewing. If false, deskewing will be done in the odometry thread.
   bool save_ply;
   bool save_points_lidar;
   bool save_points_imu;
@@ -53,6 +59,7 @@ private:
   void task();
 
   void on_new_frame(const EstimationFrame::ConstPtr& frame);
+  void process_frame(const EstimationFrame::ConstPtr& frame);
   DeskewingResult::Ptr deskew_frame(const EstimationFrame::ConstPtr& frame);
 
   void save_deskewed_frame(const DeskewingResult::Ptr& result);

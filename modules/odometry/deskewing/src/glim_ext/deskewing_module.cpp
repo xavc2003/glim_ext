@@ -16,6 +16,7 @@ namespace glim {
 
 DeskewingParams::DeskewingParams() {
   Config config(GlobalConfigExt::get_config_path("config_deskewing"));
+  use_thread = config.param<bool>("deskewing", "use_thread", true);
   save_ply = config.param<bool>("deskewing", "save_ply", false);
   save_points_lidar = config.param<bool>("deskewing", "save_points_lidar", false);
   save_points_imu = config.param<bool>("deskewing", "save_points_imu", false);
@@ -37,7 +38,12 @@ DeskewingModule::DeskewingModule(const DeskewingParams& params, const std::strin
   glim::OdometryEstimationCallbacks::on_update_new_frame.add([this](const EstimationFrame::ConstPtr& frame) { this->on_new_frame(frame); });
 
   kill_switch = false;
-  thread = std::thread([this]() { this->task(); });
+  if (params.use_thread) {
+    logger->info("deskewing uses a background thread.");
+    thread = std::thread([this]() { this->task(); });
+  } else {
+    logger->info("deskewing uses the odometry thread.");
+  }
 
   logger->info("ready");
 }
@@ -58,6 +64,14 @@ bool DeskewingModule::needs_wait() const {
   return false;
 }
 
+void DeskewingModule::on_new_frame(const EstimationFrame::ConstPtr& frame) {
+  if (!params.use_thread) {
+    process_frame(frame);
+    return;
+  }
+  input_frame_queue.push_back(frame);
+}
+
 void DeskewingModule::task() {
   while (!kill_switch || !input_frame_queue.empty()) {
     const auto popped = input_frame_queue.pop_wait();
@@ -66,32 +80,32 @@ void DeskewingModule::task() {
     }
 
     const auto frame = *popped;
-    if (frame->imu_rate_trajectory.size() == 0) {
-      logger->warn("IMU rate trajectory is empty. Set save_imu_rate_trajectory=true in config_odometry_*.json");
-      continue;
-    }
-
-    if (frame->raw_frame == nullptr) {
-      logger->warn("preprocessed_points is nullptr. skip deskewing.");
-      continue;
-    }
-
-    if (frame->raw_frame->raw_points == nullptr) {
-      logger->warn("raw_points is empty. Set keep_raw_points=true in config_ros.json");
-      continue;
-    }
-
-    logger->debug("deskewing frame at time {}", frame->stamp);
-    auto result = deskew_frame(frame);
-    on_deskeweing_result(result);
-
-    save_deskewed_frame(result);
-    publish_deskewed_frame(result);
+    process_frame(frame);
   }
 }
 
-void DeskewingModule::on_new_frame(const EstimationFrame::ConstPtr& frame) {
-  input_frame_queue.push_back(frame);
+void DeskewingModule::process_frame(const EstimationFrame::ConstPtr& frame) {
+  if (frame->imu_rate_trajectory.size() == 0) {
+    logger->warn("IMU rate trajectory is empty. Set save_imu_rate_trajectory=true in config_odometry_*.json");
+    return;
+  }
+
+  if (frame->raw_frame == nullptr) {
+    logger->warn("preprocessed_points is nullptr. skip deskewing.");
+    return;
+  }
+
+  if (frame->raw_frame->raw_points == nullptr) {
+    logger->warn("raw_points is empty. Set keep_raw_points=true in config_ros.json");
+    return;
+  }
+
+  logger->debug("deskewing frame at time {}", frame->stamp);
+  auto result = deskew_frame(frame);
+  on_deskeweing_result(result);
+
+  save_deskewed_frame(result);
+  publish_deskewed_frame(result);
 }
 
 DeskewingResult::Ptr DeskewingModule::deskew_frame(const EstimationFrame::ConstPtr& frame) {
