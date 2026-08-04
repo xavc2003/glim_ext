@@ -1,6 +1,5 @@
 #include <iostream>
 #include <spdlog/spdlog.h>
-#include <spdlog/sinks/callback_sink.h>
 #include <glim/util/logging.hpp>
 #include <glim/util/extension_module.hpp>
 
