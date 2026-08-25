@@ -3,6 +3,16 @@ project(glim_ext)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
+# adr_26: default to Release, matching glim's own CMakeLists. Without this,
+# a plain `colcon build` leaves CMAKE_BUILD_TYPE empty (-O0), and
+# FAST-LIO2's Eigen/ikd-Tree-heavy per-frame work falls to ~0.85Hz on a
+# 12Hz input -- measured live, an unbounded and growing backlog, not a
+# tuning issue. -O3 is what makes it real-time.
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build." FORCE)
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+endif()
+
 # Odometry estimation modules
 # adr_26: only fastlio2 is used here (FAST-LIO2 odometry frontend for GLIM's
 # mapper); everything else defaults off to keep this a minimal, fast build.
