@@ -4,19 +4,25 @@ project(glim_ext)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 # Odometry estimation modules
+# adr_26: only fastlio2 is used here (FAST-LIO2 odometry frontend for GLIM's
+# mapper); everything else defaults off to keep this a minimal, fast build.
+# See src/adr_localization/MAPPING_STATUS.md.
 option(ENABLE_ORBSLAM "Enable ORB-SLAM odometry" OFF)
-option(ENABLE_VELSUPP "Enable Velocity suppressor" ON)
-option(ENABLE_IMUVAL "Enable IMU calibration validator" ON)
-option(ENABLE_IMUPRED "Enable IMU prediction module" ON)
-option(ENABLE_GRAVITY "Enable Gravity estimation and correction module" ON)
-option(ENABLE_DESKEWING "Enable Point Cloud Deskewing module" ON)
-option(ENABLE_FASTLIO2 "Enable FAST-LIO2 odometry" OFF)
+option(ENABLE_VELSUPP "Enable Velocity suppressor" OFF)
+option(ENABLE_IMUVAL "Enable IMU calibration validator" OFF)
+option(ENABLE_IMUPRED "Enable IMU prediction module" OFF)
+option(ENABLE_GRAVITY "Enable Gravity estimation and correction module" OFF)
+option(ENABLE_DESKEWING "Enable Point Cloud Deskewing module" OFF)
+option(ENABLE_FASTLIO2 "Enable FAST-LIO2 odometry" ON)
 
 # Local and global mapping modules
 option(ENABLE_SCAN_CONTEXT "Enable ScanContext Loop Detector" OFF)
 option(ENABLE_DBOW "Enable DBoW Loop Detector" OFF)
-option(ENABLE_GNSS "Enable GNSS module (ROS1 is not supported)" ON)
-option(ENABLE_FLATEARTHER "Enable flat earth assumption module" ON)
+option(ENABLE_GNSS "Enable GNSS module (ROS1 is not supported)" OFF)
+option(ENABLE_FLATEARTHER "Enable flat earth assumption module" OFF)
+
+# Examples (require OpenCV; not needed to use any odometry/mapping module)
+option(ENABLE_EXAMPLES "Build example modules" OFF)
 
 #################
 ## ROS-related ##
@@ -47,11 +53,13 @@ target_compile_options(glim_ext PRIVATE
 list(APPEND glim_ext_LIBRARIES glim_ext)
 
 # Examples
-add_subdirectory(modules/example/glim_callback_demo)
-list(APPEND glim_ext_LIBRARIES glim_callback_demo)
+if(ENABLE_EXAMPLES)
+  add_subdirectory(modules/example/glim_callback_demo)
+  list(APPEND glim_ext_LIBRARIES glim_callback_demo)
 
-add_subdirectory(modules/example/logger_hook_demo)
-list(APPEND glim_ext_LIBRARIES logger_hook_demo)
+  add_subdirectory(modules/example/logger_hook_demo)
+  list(APPEND glim_ext_LIBRARIES logger_hook_demo)
+endif()
 
 # Odometry estimation modules
 if(ENABLE_ORBSLAM)
